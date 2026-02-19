@@ -18,7 +18,7 @@ def send_notes(gmail_user, gmail_password, to_address, meeting_label, summary, t
         part.set_payload(f.read())
     encoders.encode_base64(part)
     filename = os.path.basename(transcript_path)
-    part.add_header("Content-Disposition", f"attachment; filename={filename}")
+    part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
     msg.attach(part)
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
