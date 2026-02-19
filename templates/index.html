@@ -1,1 +1,151 @@
-<html><body>placeholder</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Notes</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; padding: 2rem; }
+    .card { background: white; border-radius: 12px; padding: 2rem; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { font-size: 1.4rem; color: #333; margin-bottom: 1.5rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 8px; border: none; font-size: 1rem; cursor: pointer; font-weight: 600; }
+    .btn-start { background: #e53e3e; color: white; }
+    .btn-stop  { background: #2d3748; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .timer { font-size: 1.1rem; color: #e53e3e; margin: 0.75rem 0; font-variant-numeric: tabular-nums; }
+    .jobs { margin-top: 2rem; }
+    .jobs h2 { font-size: 1rem; color: #666; margin-bottom: 0.75rem; }
+    .job { padding: 0.6rem 0.75rem; border-radius: 6px; background: #f9f9f9; margin-bottom: 0.5rem; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+    .job.done { background: #f0fff4; }
+    .job.error { background: #fff5f5; }
+    .job-label { font-weight: 500; }
+    .job-status { color: #666; font-size: 0.8rem; }
+    .job-status.done { color: #276749; }
+    .job-status.error { color: #c53030; }
+    .view-link { font-size: 0.8rem; color: #3182ce; text-decoration: none; margin-left: 0.5rem; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #e53e3e; margin-right: 6px; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .error-msg { color: #c53030; font-size: 0.75rem; display: block; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Meeting Note Taker</h1>
+
+    <div id="idle-state">
+      <button class="btn btn-start" onclick="startRecording()">&#9679; Start Recording</button>
+    </div>
+
+    <div id="recording-state" style="display:none">
+      <div class="timer"><span class="dot"></span> Recording... <span id="timer">00:00:00</span></div>
+      <button class="btn btn-stop" onclick="stopRecording()">&#9632; Stop &amp; Process</button>
+    </div>
+
+    <div class="jobs">
+      <h2>Processing jobs</h2>
+      <div id="jobs-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_LABELS = {
+      pending: 'Pending',
+      transcribing: 'Transcribing...',
+      summarizing: 'Summarizing...',
+      emailing: 'Sending email...',
+      done: 'Email sent',
+      error: 'Error'
+    };
+
+    let timerInterval = null;
+    let startTime = null;
+
+    function formatTime(ms) {
+      const s = Math.floor(ms / 1000);
+      const h = Math.floor(s / 3600).toString().padStart(2, '0');
+      const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+      const sec = (s % 60).toString().padStart(2, '0');
+      return `${h}:${m}:${sec}`;
+    }
+
+    async function startRecording() {
+      const resp = await fetch('/api/start', { method: 'POST' });
+      if (!resp.ok) { alert('Could not start recording'); return; }
+      document.getElementById('idle-state').style.display = 'none';
+      document.getElementById('recording-state').style.display = 'block';
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        document.getElementById('timer').textContent = formatTime(Date.now() - startTime);
+      }, 1000);
+    }
+
+    async function stopRecording() {
+      clearInterval(timerInterval);
+      document.getElementById('recording-state').style.display = 'none';
+      document.getElementById('idle-state').style.display = 'block';
+      await fetch('/api/stop', { method: 'POST' });
+      refreshJobs();
+    }
+
+    function buildJobRow(job) {
+      const row = document.createElement('div');
+      row.className = 'job' + (job.status === 'done' ? ' done' : job.status === 'error' ? ' error' : '');
+
+      const left = document.createElement('div');
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'job-label';
+      labelSpan.textContent = job.label;
+      left.appendChild(labelSpan);
+
+      if (job.status === 'error' && job.error) {
+        const errSpan = document.createElement('span');
+        errSpan.className = 'error-msg';
+        errSpan.textContent = job.error;
+        left.appendChild(errSpan);
+      }
+
+      const right = document.createElement('div');
+      const statusSpan = document.createElement('span');
+      statusSpan.className = 'job-status' + (job.status === 'done' ? ' done' : job.status === 'error' ? ' error' : '');
+      const prefix = job.status === 'done' ? '\u2713 ' : job.status === 'error' ? '\u2717 ' : '\u23f3 ';
+      statusSpan.textContent = prefix + (STATUS_LABELS[job.status] || job.status);
+      right.appendChild(statusSpan);
+
+      if (job.status === 'done') {
+        const link = document.createElement('a');
+        link.className = 'view-link';
+        link.href = `/api/jobs/${encodeURIComponent(job.id)}/transcript`;
+        link.target = '_blank';
+        link.textContent = 'Transcript';
+        right.appendChild(link);
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+      return row;
+    }
+
+    async function refreshJobs() {
+      const resp = await fetch('/api/jobs');
+      const jobs = await resp.json();
+      const container = document.getElementById('jobs-list');
+      container.replaceChildren();
+
+      if (jobs.length === 0) {
+        const em = document.createElement('em');
+        em.style.cssText = 'color:#999;font-size:0.85rem';
+        em.textContent = 'None';
+        container.appendChild(em);
+        return;
+      }
+
+      jobs.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      jobs.forEach(job => container.appendChild(buildJobRow(job)));
+    }
+
+    setInterval(refreshJobs, 5000);
+    refreshJobs();
+  </script>
+</body>
+</html>
