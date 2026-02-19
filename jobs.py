@@ -36,6 +36,8 @@ class JobManager:
 
     def get_job(self, job_id):
         with self._lock:
+            if job_id not in self._jobs:
+                return None
             return dict(self._jobs[job_id])
 
     def list_jobs(self):
@@ -60,7 +62,8 @@ class JobManager:
             summary = summarize(transcript, model=ollama_model)
 
             self._set_status(job_id, JobStatus.EMAILING)
-            label = self._jobs[job_id]["label"]
+            with self._lock:
+                label = self._jobs[job_id]["label"]
             send_notes(
                 gmail_user=gmail_user,
                 gmail_password=gmail_password,

@@ -82,9 +82,15 @@
 
     async function stopRecording() {
       clearInterval(timerInterval);
+      const resp = await fetch('/api/stop', { method: 'POST' });
+      if (!resp.ok) {
+        alert('Could not stop recording');
+        document.getElementById('recording-state').style.display = 'block';
+        document.getElementById('idle-state').style.display = 'none';
+        return;
+      }
       document.getElementById('recording-state').style.display = 'none';
       document.getElementById('idle-state').style.display = 'block';
-      await fetch('/api/stop', { method: 'POST' });
       refreshJobs();
     }
 

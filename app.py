@@ -19,6 +19,14 @@ recorder = Recorder(
 )
 job_manager = JobManager()
 
+_required_env = ["GMAIL_USER", "GMAIL_APP_PASSWORD", "GMAIL_TO"]
+_missing = [k for k in _required_env if not os.getenv(k)]
+if _missing:
+    import sys
+    print(f"ERROR: Missing required env vars: {', '.join(_missing)}", file=sys.stderr)
+    print("Copy .env.example to .env and fill in your credentials.", file=sys.stderr)
+    sys.exit(1)
+
 
 @app.route("/")
 def index():
@@ -75,4 +83,4 @@ def view_transcript(job_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
