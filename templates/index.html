@@ -85,13 +85,38 @@
       const resp = await fetch('/api/stop', { method: 'POST' });
       if (!resp.ok) {
         alert('Could not stop recording');
-        document.getElementById('recording-state').style.display = 'block';
-        document.getElementById('idle-state').style.display = 'none';
+        await syncStatus();
         return;
       }
       document.getElementById('recording-state').style.display = 'none';
       document.getElementById('idle-state').style.display = 'block';
       refreshJobs();
+    }
+
+    function isShowingRecording() {
+      return document.getElementById('recording-state').style.display !== 'none';
+    }
+
+    async function syncStatus() {
+      const resp = await fetch('/api/status');
+      const { recording } = await resp.json();
+      if (recording && !isShowingRecording()) {
+        // Server is recording but UI shows idle — snap to recording state
+        document.getElementById('idle-state').style.display = 'none';
+        document.getElementById('recording-state').style.display = 'block';
+        if (!timerInterval) {
+          startTime = Date.now();
+          timerInterval = setInterval(() => {
+            document.getElementById('timer').textContent = formatTime(Date.now() - startTime);
+          }, 1000);
+        }
+      } else if (!recording && isShowingRecording()) {
+        // Server is not recording but UI shows recording — snap to idle
+        clearInterval(timerInterval);
+        timerInterval = null;
+        document.getElementById('recording-state').style.display = 'none';
+        document.getElementById('idle-state').style.display = 'block';
+      }
     }
 
     function buildJobRow(job) {
@@ -150,8 +175,12 @@
       jobs.forEach(job => container.appendChild(buildJobRow(job)));
     }
 
-    setInterval(refreshJobs, 5000);
-    refreshJobs();
+    async function refresh() {
+      await Promise.all([syncStatus(), refreshJobs()]);
+    }
+
+    setInterval(refresh, 5000);
+    refresh();
   </script>
 </body>
 </html>
