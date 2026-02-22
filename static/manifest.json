@@ -1,0 +1,17 @@
+{
+  "name": "Meeting Notes",
+  "short_name": "MeetingNotes",
+  "description": "Automatic meeting recorder, transcriber, and summarizer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#2d3748",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
