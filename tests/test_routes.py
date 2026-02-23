@@ -12,6 +12,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("OLLAMA_MODEL", "llama3")
     monkeypatch.setattr(app_module, "RECORDINGS_DIR", str(tmp_path))
     monkeypatch.setattr(app_module, "TRANSCRIPTS_DIR", str(tmp_path))
+    from jobs import JobManager
+    monkeypatch.setattr(app_module, "job_manager", JobManager(":memory:"))
     app_module.app.config["TESTING"] = True
     return app_module.app.test_client()
 
