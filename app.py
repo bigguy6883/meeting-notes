@@ -13,11 +13,13 @@ TRANSCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "transcripts")
 os.makedirs(RECORDINGS_DIR, exist_ok=True)
 os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
 
+DB_PATH = os.path.join(os.path.dirname(__file__), "jobs.db")
+
 recorder = Recorder(
     mic_device=os.getenv("MIC_DEVICE", "hw:1,0"),
     output_dir=RECORDINGS_DIR
 )
-job_manager = JobManager()
+job_manager = JobManager(db_path=DB_PATH)
 
 _required_env = ["GMAIL_USER", "GMAIL_APP_PASSWORD", "GMAIL_TO"]
 _missing = [k for k in _required_env if not os.getenv(k)]
