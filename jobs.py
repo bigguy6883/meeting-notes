@@ -20,7 +20,7 @@ class JobManager:
         self._jobs = {}
         self._lock = threading.Lock()
 
-    def create_job(self, label):
+    def create_job(self, label, audio_path=None):
         job_id = str(uuid.uuid4())[:8]
         with self._lock:
             self._jobs[job_id] = {
@@ -30,7 +30,8 @@ class JobManager:
                 "summary": None,
                 "transcript_path": None,
                 "error": None,
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
+                "audio_path": audio_path
             }
         return job_id
 
@@ -81,6 +82,17 @@ class JobManager:
             with self._lock:
                 self._jobs[job_id]["status"] = JobStatus.ERROR
                 self._jobs[job_id]["error"] = str(e)
+
+    def retry_job(self, job_id):
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if not job or job["status"] != JobStatus.ERROR:
+                return False
+            job["status"] = JobStatus.PENDING
+            job["error"] = None
+            job["summary"] = None
+            job["transcript_path"] = None
+        return True
 
     def process_async(self, **kwargs):
         t = threading.Thread(target=self.process, kwargs=kwargs, daemon=True)

@@ -27,6 +27,7 @@
     .job-status.done { color: #276749; }
     .job-status.error { color: #c53030; }
     .view-link { font-size: 0.8rem; color: #3182ce; text-decoration: none; margin-left: 0.5rem; }
+    .retry-btn { font-size: 0.8rem; color: #c53030; background: none; border: none; cursor: pointer; margin-left: 0.5rem; padding: 0; font-weight: 600; }
     .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #e53e3e; margin-right: 6px; animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     .error-msg { color: #c53030; font-size: 0.75rem; display: block; margin-top: 2px; }
@@ -153,6 +154,18 @@
         link.target = '_blank';
         link.textContent = 'Transcript';
         right.appendChild(link);
+      }
+
+      if (job.status === 'error') {
+        const btn = document.createElement('button');
+        btn.className = 'retry-btn';
+        btn.textContent = 'Retry';
+        btn.onclick = async () => {
+          btn.disabled = true;
+          await fetch(`/api/jobs/${encodeURIComponent(job.id)}/retry`, { method: 'POST' });
+          await refreshJobs();
+        };
+        right.appendChild(btn);
       }
 
       row.appendChild(left);

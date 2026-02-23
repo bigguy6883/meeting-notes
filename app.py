@@ -50,7 +50,7 @@ def stop_recording():
     basename = os.path.basename(filepath).replace("meeting_", "").replace(".mp3", "")
     label = f"{basename[:8]} {basename[9:13]}" if len(basename) >= 13 else basename
 
-    job_id = job_manager.create_job(label)
+    job_id = job_manager.create_job(label, audio_path=filepath)
     job_manager.process_async(
         job_id=job_id,
         audio_path=filepath,
@@ -72,6 +72,26 @@ def recording_status():
 @app.route("/api/jobs")
 def list_jobs():
     return jsonify(job_manager.list_jobs())
+
+
+@app.route("/api/jobs/<job_id>/retry", methods=["POST"])
+def retry_job(job_id):
+    job = job_manager.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Not found"}), 404
+    if not job_manager.retry_job(job_id):
+        return jsonify({"error": "Job is not in error state"}), 409
+    job_manager.process_async(
+        job_id=job_id,
+        audio_path=job["audio_path"],
+        transcript_dir=TRANSCRIPTS_DIR,
+        gmail_user=os.getenv("GMAIL_USER"),
+        gmail_password=os.getenv("GMAIL_APP_PASSWORD"),
+        to_address=os.getenv("GMAIL_TO"),
+        whisper_model=os.getenv("WHISPER_MODEL", "medium"),
+        ollama_model=os.getenv("OLLAMA_MODEL", "llama3")
+    )
+    return jsonify({"status": "retrying", "job_id": job_id})
 
 
 @app.route("/api/jobs/<job_id>/transcript")
