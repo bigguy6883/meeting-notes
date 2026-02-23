@@ -4,14 +4,14 @@ from unittest.mock import patch, MagicMock
 from jobs import JobManager, JobStatus
 
 def test_new_job_is_pending():
-    jm = JobManager()
+    jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
     job = jm.get_job(job_id)
     assert job["status"] == JobStatus.PENDING
     assert job["label"] == "meeting_20260218_1030"
 
 def test_jobs_list_returns_all():
-    jm = JobManager()
+    jm = JobManager(":memory:")
     jm.create_job("meeting_a")
     jm.create_job("meeting_b")
     assert len(jm.list_jobs()) == 2
@@ -20,7 +20,7 @@ def test_process_job_runs_pipeline(tmp_path):
     audio = tmp_path / "meeting.mp3"
     audio.write_bytes(b"fake audio")
 
-    jm = JobManager()
+    jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
     with patch("jobs.transcribe", return_value="transcript text"), \
@@ -41,7 +41,7 @@ def test_process_job_runs_pipeline(tmp_path):
     assert job["status"] == JobStatus.DONE
 
 def test_process_job_sets_error_on_failure(tmp_path):
-    jm = JobManager()
+    jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_fail")
     with patch("jobs.transcribe", side_effect=Exception("whisper failed")):
         jm.process(
@@ -59,7 +59,7 @@ def test_process_job_sets_error_on_failure(tmp_path):
     assert "whisper failed" in job["error"]
 
 def test_get_job_unknown_id_returns_none():
-    jm = JobManager()
+    jm = JobManager(":memory:")
     result = jm.get_job("nonexistent-id")
     assert result is None
 
@@ -67,7 +67,7 @@ def test_process_job_sets_transcript_path_and_summary(tmp_path):
     audio = tmp_path / "meeting.mp3"
     audio.write_bytes(b"fake audio")
 
-    jm = JobManager()
+    jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
     with patch("jobs.transcribe", return_value="transcript text"), \
@@ -87,3 +87,18 @@ def test_process_job_sets_transcript_path_and_summary(tmp_path):
     job = jm.get_job(job_id)
     assert job["transcript_path"] is not None
     assert job["summary"] == "summary text"
+
+def test_startup_marks_interrupted_jobs_as_error():
+    jm = JobManager(":memory:")
+    job_id = jm.create_job("meeting_interrupted")
+    # Manually force a mid-run status directly in the DB
+    jm._db.execute("UPDATE jobs SET status='transcribing' WHERE id=?", (job_id,))
+    jm._db.commit()
+
+    # Simulate a restart by creating a new JobManager on the same DB
+    # For :memory: we can't literally reuse the connection, so we call _recover() directly
+    jm._recover()
+
+    job = jm.get_job(job_id)
+    assert job["status"] == JobStatus.ERROR
+    assert job["error"] == "interrupted by restart"
