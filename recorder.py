@@ -15,6 +15,7 @@ class Recorder:
         self._process = subprocess.Popen([
             "ffmpeg", "-y",
             "-f", "alsa",
+            "-channels", "1",
             "-i", self.mic_device,
             "-ar", "16000",
             "-ac", "1",
