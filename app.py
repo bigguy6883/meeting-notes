@@ -21,7 +21,7 @@ recorder = Recorder(
 )
 job_manager = JobManager(db_path=DB_PATH)
 
-_required_env = ["GMAIL_USER", "GMAIL_APP_PASSWORD", "GMAIL_TO"]
+_required_env = ["GMAIL_USER", "GMAIL_APP_PASSWORD", "GMAIL_TO", "GROQ_API_KEY"]
 _missing = [k for k in _required_env if not os.getenv(k)]
 if _missing:
     import sys
@@ -60,7 +60,6 @@ def stop_recording():
         gmail_user=os.getenv("GMAIL_USER"),
         gmail_password=os.getenv("GMAIL_APP_PASSWORD"),
         to_address=os.getenv("GMAIL_TO"),
-        whisper_model=os.getenv("WHISPER_MODEL", "medium"),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3")
     )
     return jsonify({"status": "processing", "job_id": job_id})
@@ -90,7 +89,6 @@ def retry_job(job_id):
         gmail_user=os.getenv("GMAIL_USER"),
         gmail_password=os.getenv("GMAIL_APP_PASSWORD"),
         to_address=os.getenv("GMAIL_TO"),
-        whisper_model=os.getenv("WHISPER_MODEL", "medium"),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3")
     )
     return jsonify({"status": "retrying", "job_id": job_id})
