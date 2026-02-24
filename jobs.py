@@ -5,15 +5,17 @@ import threading
 from enum import Enum
 from datetime import datetime
 from transcriber import transcribe
+from diarizer import diarize
 from summarizer import summarize
 from emailer import send_notes
 
-_INTERRUPTED_STATUSES = ("pending", "transcribing", "summarizing", "emailing")
+_INTERRUPTED_STATUSES = ("pending", "transcribing", "diarizing", "summarizing", "emailing")
 
 
 class JobStatus(str, Enum):
     PENDING = "pending"
     TRANSCRIBING = "transcribing"
+    DIARIZING = "diarizing"
     SUMMARIZING = "summarizing"
     EMAILING = "emailing"
     DONE = "done"
@@ -84,10 +86,16 @@ class JobManager:
                 os.path.basename(audio_path).replace(".mp3", ".txt")
             )
             self._set_status(job_id, JobStatus.TRANSCRIBING)
-            transcript = transcribe(audio_path, model_name=whisper_model, output_path=transcript_path)
+            transcript_text, whisper_segments = transcribe(
+                audio_path, model_name=whisper_model,
+                output_path=transcript_path, return_segments=True
+            )
+
+            self._set_status(job_id, JobStatus.DIARIZING)
+            transcript, diarized = diarize(audio_path, whisper_segments)
 
             self._set_status(job_id, JobStatus.SUMMARIZING)
-            summary = summarize(transcript, model=ollama_model)
+            summary = summarize(transcript, model=ollama_model, diarized=diarized)
 
             self._set_status(job_id, JobStatus.EMAILING)
             label = self._db.execute(

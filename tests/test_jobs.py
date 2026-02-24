@@ -23,7 +23,8 @@ def test_process_job_runs_pipeline(tmp_path):
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
-    with patch("jobs.transcribe", return_value="transcript text"), \
+    with patch("jobs.transcribe", return_value=("transcript text", [])), \
+         patch("jobs.diarize", return_value=("transcript text", False)), \
          patch("jobs.summarize", return_value="summary text"), \
          patch("jobs.send_notes"):
         jm.process(
@@ -70,7 +71,8 @@ def test_process_job_sets_transcript_path_and_summary(tmp_path):
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
-    with patch("jobs.transcribe", return_value="transcript text"), \
+    with patch("jobs.transcribe", return_value=("transcript text", [])), \
+         patch("jobs.diarize", return_value=("transcript text", False)), \
          patch("jobs.summarize", return_value="summary text"), \
          patch("jobs.send_notes"):
         jm.process(
@@ -92,7 +94,7 @@ def test_startup_marks_interrupted_jobs_as_error():
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_interrupted")
     # Manually force a mid-run status directly in the DB
-    jm._db.execute("UPDATE jobs SET status='transcribing' WHERE id=?", (job_id,))
+    jm._db.execute("UPDATE jobs SET status='diarizing' WHERE id=?", (job_id,))
     jm._db.commit()
 
     # Simulate a restart by creating a new JobManager on the same DB
