@@ -79,7 +79,7 @@ class JobManager:
             self._db.commit()
 
     def process(self, job_id, audio_path, transcript_dir, gmail_user,
-                gmail_password, to_address, whisper_model, ollama_model):
+                gmail_password, to_address, ollama_model):
         try:
             transcript_path = os.path.join(
                 transcript_dir,
@@ -88,7 +88,7 @@ class JobManager:
             self._set_status(job_id, JobStatus.TRANSCRIBING)
             # transcript_text is written to disk via output_path; diarize() produces the version for summarization
             transcript_text, whisper_segments = transcribe(
-                audio_path, model_name=whisper_model,
+                audio_path,
                 output_path=transcript_path, return_segments=True
             )
 
