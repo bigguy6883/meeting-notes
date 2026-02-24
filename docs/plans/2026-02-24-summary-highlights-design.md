@@ -94,15 +94,58 @@ Transcript:
 ### No changes needed
 `app.py`, `emailer.py`, `transcriber.py`, `recorder.py`, UI template (STATUS_LABELS in `index.html` gets one new entry: `diarizing: 'Diarizing...'`)
 
+## Updated Architecture (2026-02-24)
+
+Revised after faster-whisper migration and disk space review. Three key changes:
+
+### 1. pyannote.audio is an optional dependency
+
+`pyannote.audio` is **not added to `requirements.txt`**. Install manually when ready:
+```bash
+pip install pyannote.audio
+```
+The service works without it. Diarization silently skips when not installed.
+
+### 2. Gated behind HF_TOKEN with lazy import
+
+`diarizer.py` checks for `HF_TOKEN` first. If absent, returns `(plain_text, False)` immediately — pyannote is never imported. If token is present but pyannote is not installed, `ImportError` is caught and falls back gracefully.
+
+```python
+def diarize(audio_path, whisper_segments, hf_token=None):
+    plain_text = " ".join(seg.text.strip() for seg in whisper_segments)
+    token = hf_token or os.environ.get("HF_TOKEN", "")
+    if not token:
+        return plain_text, False
+    try:
+        from pyannote.audio import Pipeline   # lazy — only if token present
+        ...
+    except (ImportError, Exception):
+        return plain_text, False
+```
+
+### 3. faster-whisper segment objects (not dicts)
+
+`transcriber.py` gains `return_segments=True` which returns a list of faster-whisper segment objects. `diarizer.py` accesses `.start`, `.end`, `.text` attributes (not `["start"]` dict keys).
+
+`transcriber.py` collects the generator into a list first:
+```python
+segments_list = list(model.transcribe(audio_path, beam_size=5)[0])
+text = " ".join(s.text.strip() for s in segments_list).strip()
+if return_segments:
+    return text, segments_list
+return text
+```
+
 ## Environment Setup
 
 - One-time: create free account at huggingface.co, generate token, set `HF_TOKEN=` in `.env`
 - One-time: accept pyannote model license on HuggingFace (required by pyannote terms)
-- pyannote downloads model weights on first run (~600MB), cached in `~/.cache/torch/`
+- One-time: `pip install pyannote.audio` (torch 2.6.0 already installed — ~300–500MB additional)
+- pyannote downloads model weights on first run (~600MB), cached in `~/.cache/`
 
 ## Performance
 
-- Current pipeline: ~15–20 min per hour of audio
+- Current pipeline (faster-whisper): ~5–8 min per hour of audio
 - Diarization adds: ~10–15 min per hour on aarch64 CPU
 - Runs fully in background — no user-facing delay
 

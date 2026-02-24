@@ -23,8 +23,10 @@ def test_process_job_runs_pipeline(tmp_path):
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
-    with patch("jobs.transcribe", return_value="transcript text"), \
-         patch("jobs.summarize", return_value="summary text"), \
+    mock_summarize = MagicMock(return_value="summary text")
+    with patch("jobs.transcribe", return_value=("transcript text", [])), \
+         patch("jobs.diarize", return_value=("transcript text", False)), \
+         patch("jobs.summarize", mock_summarize), \
          patch("jobs.send_notes"):
         jm.process(
             job_id=job_id,
@@ -39,6 +41,7 @@ def test_process_job_runs_pipeline(tmp_path):
 
     job = jm.get_job(job_id)
     assert job["status"] == JobStatus.DONE
+    mock_summarize.assert_called_once_with("transcript text", model="llama3", diarized=False)
 
 def test_process_job_sets_error_on_failure(tmp_path):
     jm = JobManager(":memory:")
@@ -70,8 +73,10 @@ def test_process_job_sets_transcript_path_and_summary(tmp_path):
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_20260218_1030")
 
-    with patch("jobs.transcribe", return_value="transcript text"), \
-         patch("jobs.summarize", return_value="summary text"), \
+    mock_summarize = MagicMock(return_value="summary text")
+    with patch("jobs.transcribe", return_value=("transcript text", [])), \
+         patch("jobs.diarize", return_value=("transcript text", False)), \
+         patch("jobs.summarize", mock_summarize), \
          patch("jobs.send_notes"):
         jm.process(
             job_id=job_id,
@@ -92,7 +97,7 @@ def test_startup_marks_interrupted_jobs_as_error():
     jm = JobManager(":memory:")
     job_id = jm.create_job("meeting_interrupted")
     # Manually force a mid-run status directly in the DB
-    jm._db.execute("UPDATE jobs SET status='transcribing' WHERE id=?", (job_id,))
+    jm._db.execute("UPDATE jobs SET status='diarizing' WHERE id=?", (job_id,))
     jm._db.commit()
 
     # Simulate a restart by creating a new JobManager on the same DB
