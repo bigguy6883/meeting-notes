@@ -22,6 +22,6 @@ def transcribe(audio_path, output_path=None, return_segments=False):
         with open(output_path, "w") as f:
             f.write(text)
     if return_segments:
-        segments = [Segment(start=s.start, end=s.end, text=s.text) for s in (response.segments or [])]
+        segments = [Segment(start=s['start'], end=s['end'], text=s['text']) for s in (response.segments or [])]
         return text, segments
     return text

@@ -13,11 +13,7 @@ def _make_mock_response(segments_data):
     segs = []
     texts = []
     for text, start, end in segments_data:
-        s = MagicMock()
-        s.text = text
-        s.start = start
-        s.end = end
-        segs.append(s)
+        segs.append({'text': text, 'start': start, 'end': end})
         texts.append(text.strip())
     response.text = " ".join(texts)
     response.segments = segs
