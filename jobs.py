@@ -86,6 +86,7 @@ class JobManager:
                 os.path.basename(audio_path).replace(".mp3", ".txt")
             )
             self._set_status(job_id, JobStatus.TRANSCRIBING)
+            # transcript_text is written to disk via output_path; diarize() produces the version for summarization
             transcript_text, whisper_segments = transcribe(
                 audio_path, model_name=whisper_model,
                 output_path=transcript_path, return_segments=True
