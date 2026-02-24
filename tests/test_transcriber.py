@@ -37,7 +37,8 @@ def test_transcribe_saves_to_file(tmp_path):
         mock_cls.return_value = _make_mock_model(["Meeting content here."])
         transcribe(audio_file, model_name="tiny", output_path=out_file)
     assert os.path.exists(out_file)
-    assert open(out_file).read() == "Meeting content here."
+    with open(out_file) as f:
+        assert f.read() == "Meeting content here."
 
 def test_transcribe_joins_multiple_segments(tmp_path):
     audio_file = str(tmp_path / "test.mp3")
@@ -68,13 +69,12 @@ def test_transcribe_caches_model(tmp_path):
     audio_file = str(tmp_path / "test.mp3")
     open(audio_file, "w").close()
     with patch("transcriber.WhisperModel") as mock_cls:
-        mock_cls.return_value = _make_mock_model(["a", "b"])
+        mock_model = _make_mock_model(["a"])
+        mock_cls.return_value = mock_model
         transcribe(audio_file, model_name="tiny")
-        # reset return value for second call
-        mock_cls.return_value = _make_mock_model(["c"])
         transcribe(audio_file, model_name="tiny")
-    # WhisperModel constructor should only be called once — second call uses cache
     assert mock_cls.call_count == 1
+    assert mock_model.transcribe.call_count == 2
 
 def test_transcribe_returns_segments_when_requested(tmp_path):
     audio_file = str(tmp_path / "test.mp3")
