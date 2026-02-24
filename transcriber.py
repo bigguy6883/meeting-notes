@@ -1,6 +1,6 @@
 import whisper
 
-def transcribe(audio_path, model_name="medium", output_path=None):
+def transcribe(audio_path, model_name="small", output_path=None):
     model = whisper.load_model(model_name)
     result = model.transcribe(audio_path)
     text = result["text"].strip()
