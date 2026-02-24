@@ -1,5 +1,5 @@
 Flask==3.1.1
-groq
+groq==1.0.0
 ollama
 python-dotenv==1.0.1
 pytest
