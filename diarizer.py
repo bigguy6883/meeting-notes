@@ -35,7 +35,7 @@ def diarize(audio_path, whisper_segments, hf_token=None):
 
         pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
-            use_auth_token=token
+            token=token
         )
         diarization = pipeline(audio_path)
 
