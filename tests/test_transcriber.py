@@ -1,7 +1,14 @@
 import os
 import pytest
 from unittest.mock import patch, MagicMock
+import transcriber
 from transcriber import transcribe
+
+@pytest.fixture(autouse=True)
+def clear_model_cache():
+    transcriber._model_cache.clear()
+    yield
+    transcriber._model_cache.clear()
 
 def _make_mock_model(texts):
     """Return a mock WhisperModel whose transcribe() yields segments with .text."""
@@ -16,7 +23,7 @@ def _make_mock_model(texts):
 
 def test_transcribe_returns_text(tmp_path):
     audio_file = str(tmp_path / "test.mp3")
-    open(audio_file, "w").close()  # dummy file
+    open(audio_file, "w").close()
     with patch("transcriber.WhisperModel") as mock_cls:
         mock_cls.return_value = _make_mock_model(["Hello this is a test meeting transcript."])
         result = transcribe(audio_file, model_name="tiny")
@@ -46,7 +53,28 @@ def test_transcribe_uses_correct_model_params(tmp_path):
     with patch("transcriber.WhisperModel") as mock_cls:
         mock_cls.return_value = _make_mock_model(["text"])
         transcribe(audio_file, model_name="medium")
-    mock_cls.assert_called_once_with("medium", device="cpu", compute_type="int8")
+    mock_cls.assert_called_once_with("medium", device="cpu", compute_type="int8", cpu_threads=4)
+
+def test_transcribe_uses_vad_and_beam_size(tmp_path):
+    audio_file = str(tmp_path / "test.mp3")
+    open(audio_file, "w").close()
+    with patch("transcriber.WhisperModel") as mock_cls:
+        mock_model = _make_mock_model(["text"])
+        mock_cls.return_value = mock_model
+        transcribe(audio_file, model_name="tiny")
+    mock_model.transcribe.assert_called_once_with(audio_file, beam_size=1, vad_filter=True)
+
+def test_transcribe_caches_model(tmp_path):
+    audio_file = str(tmp_path / "test.mp3")
+    open(audio_file, "w").close()
+    with patch("transcriber.WhisperModel") as mock_cls:
+        mock_cls.return_value = _make_mock_model(["a", "b"])
+        transcribe(audio_file, model_name="tiny")
+        # reset return value for second call
+        mock_cls.return_value = _make_mock_model(["c"])
+        transcribe(audio_file, model_name="tiny")
+    # WhisperModel constructor should only be called once — second call uses cache
+    assert mock_cls.call_count == 1
 
 def test_transcribe_returns_segments_when_requested(tmp_path):
     audio_file = str(tmp_path / "test.mp3")
