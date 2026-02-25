@@ -106,3 +106,30 @@ def test_startup_marks_interrupted_jobs_as_error():
     job = jm.get_job(job_id)
     assert job["status"] == JobStatus.ERROR
     assert job["error"] == "interrupted by restart"
+
+
+def test_process_job_writes_diarized_transcript(tmp_path):
+    audio = tmp_path / "meeting.mp3"
+    audio.write_bytes(b"fake audio")
+
+    jm = JobManager(":memory:")
+    job_id = jm.create_job("meeting_20260218_1030")
+
+    with patch("jobs.transcribe", return_value=("plain text", [])), \
+         patch("jobs.diarize", return_value=("Speaker_00: Hello\nSpeaker_01: World", True)), \
+         patch("jobs.summarize", return_value="summary"), \
+         patch("jobs.send_notes"):
+        jm.process(
+            job_id=job_id,
+            audio_path=str(audio),
+            transcript_dir=str(tmp_path),
+            gmail_user="u@g.com",
+            gmail_password="pw",
+            to_address="u@g.com",
+            summary_model="llama-3.3-70b-versatile"
+        )
+
+    job = jm.get_job(job_id)
+    transcript_contents = open(job["transcript_path"]).read()
+    assert "Speaker_00: Hello" in transcript_contents
+    assert "Speaker_01: World" in transcript_contents

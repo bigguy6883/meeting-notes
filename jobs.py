@@ -94,6 +94,9 @@ class JobManager:
 
             self._set_status(job_id, JobStatus.DIARIZING)
             transcript, diarized = diarize(audio_path, whisper_segments)
+            if diarized:
+                with open(transcript_path, "w") as f:
+                    f.write(transcript)
 
             self._set_status(job_id, JobStatus.SUMMARIZING)
             summary = summarize(transcript, model=summary_model, diarized=diarized)
