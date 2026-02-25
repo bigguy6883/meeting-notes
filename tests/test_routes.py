@@ -10,7 +10,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("GMAIL_TO", "test@gmail.com")
     monkeypatch.setenv("GROQ_API_KEY", "test_groq_key")
     monkeypatch.setenv("MIC_DEVICE", "hw:0,0")
-    monkeypatch.setenv("OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("GROQ_SUMMARY_MODEL", "llama-3.3-70b-versatile")
     monkeypatch.setattr(app_module, "RECORDINGS_DIR", str(tmp_path))
     monkeypatch.setattr(app_module, "TRANSCRIPTS_DIR", str(tmp_path))
     from jobs import JobManager
