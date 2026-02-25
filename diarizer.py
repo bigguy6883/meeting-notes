@@ -9,11 +9,15 @@ def _convert_to_wav(audio_path):
     """Convert audio to 16kHz mono WAV via ffmpeg. Returns temp WAV path (caller must delete)."""
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.close()
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", audio_path, "-ar", "16000", "-ac", "1", tmp.name],
-        capture_output=True,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", audio_path, "-ar", "16000", "-ac", "1", tmp.name],
+            capture_output=True,
+            check=True,
+        )
+    except Exception:
+        os.unlink(tmp.name)
+        raise
     return tmp.name
 
 
@@ -29,7 +33,7 @@ def diarize(audio_path, whisper_segments):
     - fewer than 2 speakers are detected
     - any exception occurs
     """
-    plain_text = " ".join(seg.text.strip() for seg in whisper_segments)
+    plain_text = " ".join((seg.text or "").strip() for seg in whisper_segments)
 
     try:
         from resemblyzer import VoiceEncoder, preprocess_wav

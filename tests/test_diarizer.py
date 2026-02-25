@@ -46,7 +46,9 @@ def _patch_resemblyzer(mock_resemblyzer, mock_sklearn):
 
 def test_diarize_falls_back_on_import_error():
     segs = [_seg(0.0, 3.0, "Hello world"), _seg(5.0, 8.0, "Goodbye world")]
-    with patch.dict(sys.modules, {"resemblyzer": None}):
+    with patch("diarizer._convert_to_wav", return_value="/tmp/fake.wav"), \
+         patch("os.unlink"), \
+         patch.dict(sys.modules, {"resemblyzer": None}):
         text, diarized = diarize("/fake/audio.mp3", segs)
     assert diarized is False
     assert "Hello world" in text
