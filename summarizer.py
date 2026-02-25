@@ -1,4 +1,6 @@
-import ollama
+from groq import Groq
+
+_client = Groq()
 
 PROMPT_SIMPLE = """You are a meeting assistant. Analyze this transcript and provide:
 
@@ -31,10 +33,10 @@ Transcript:
 {transcript}"""
 
 
-def summarize(transcript, model="llama3", diarized=False):
+def summarize(transcript, model="llama-3.3-70b-versatile", diarized=False):
     template = PROMPT_DIARIZED if diarized else PROMPT_SIMPLE
-    response = ollama.chat(
+    response = _client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": template.format(transcript=transcript)}]
     )
-    return response.message.content.strip()
+    return response.choices[0].message.content.strip()
