@@ -38,12 +38,12 @@ def test_process_job_runs_pipeline(tmp_path):
             gmail_user="u@g.com",
             gmail_password="pw",
             to_address="u@g.com",
-            ollama_model="llama3"
+            summary_model="llama-3.3-70b-versatile"
         )
 
     job = jm.get_job(job_id)
     assert job["status"] == JobStatus.DONE
-    mock_summarize.assert_called_once_with("transcript text", model="llama3", diarized=False)
+    mock_summarize.assert_called_once_with("transcript text", model="llama-3.3-70b-versatile", diarized=False)
 
 
 def test_process_job_sets_error_on_failure(tmp_path):
@@ -57,7 +57,7 @@ def test_process_job_sets_error_on_failure(tmp_path):
             gmail_user="u@g.com",
             gmail_password="pw",
             to_address="u@g.com",
-            ollama_model="llama3"
+            summary_model="llama-3.3-70b-versatile"
         )
     job = jm.get_job(job_id)
     assert job["status"] == JobStatus.ERROR
@@ -89,7 +89,7 @@ def test_process_job_sets_transcript_path_and_summary(tmp_path):
             gmail_user="u@g.com",
             gmail_password="pw",
             to_address="u@g.com",
-            ollama_model="llama3"
+            summary_model="llama-3.3-70b-versatile"
         )
 
     job = jm.get_job(job_id)

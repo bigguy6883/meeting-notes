@@ -79,7 +79,7 @@ class JobManager:
             self._db.commit()
 
     def process(self, job_id, audio_path, transcript_dir, gmail_user,
-                gmail_password, to_address, ollama_model):
+                gmail_password, to_address, summary_model):
         try:
             transcript_path = os.path.join(
                 transcript_dir,
@@ -96,7 +96,7 @@ class JobManager:
             transcript, diarized = diarize(audio_path, whisper_segments)
 
             self._set_status(job_id, JobStatus.SUMMARIZING)
-            summary = summarize(transcript, model=ollama_model, diarized=diarized)
+            summary = summarize(transcript, model=summary_model, diarized=diarized)
 
             self._set_status(job_id, JobStatus.EMAILING)
             label = self._db.execute(

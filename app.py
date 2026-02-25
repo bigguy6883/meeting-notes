@@ -60,7 +60,7 @@ def stop_recording():
         gmail_user=os.getenv("GMAIL_USER"),
         gmail_password=os.getenv("GMAIL_APP_PASSWORD"),
         to_address=os.getenv("GMAIL_TO"),
-        ollama_model=os.getenv("OLLAMA_MODEL", "llama3")
+        summary_model=os.getenv("GROQ_SUMMARY_MODEL", "llama-3.3-70b-versatile")
     )
     return jsonify({"status": "processing", "job_id": job_id})
 
@@ -89,7 +89,7 @@ def retry_job(job_id):
         gmail_user=os.getenv("GMAIL_USER"),
         gmail_password=os.getenv("GMAIL_APP_PASSWORD"),
         to_address=os.getenv("GMAIL_TO"),
-        ollama_model=os.getenv("OLLAMA_MODEL", "llama3")
+        summary_model=os.getenv("GROQ_SUMMARY_MODEL", "llama-3.3-70b-versatile")
     )
     return jsonify({"status": "retrying", "job_id": job_id})
 
